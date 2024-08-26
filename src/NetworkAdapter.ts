@@ -18,14 +18,30 @@ export class PeerjsNetworkAdapter
   peerId?: t.PeerId;
   peerMetadata?: t.PeerMetadata;
 
-  #isReady = false;
   #conn: t.DataConnection;
   #events = new EventEmitter<EventTypes>();
+
+  #ready = false;
+  #readyResolver?: () => void;
+  #readyPromise: Promise<void> = new Promise<void>((resolve) => (this.#readyResolver = resolve));
+  #forceReady() {
+    if (this.#ready) return;
+    this.#ready = true;
+    this.#readyResolver?.();
+  }
 
   constructor(conn: t.DataConnection) {
     if (!conn) throw new Error(`A peerjs data-connection is required`);
     super();
     this.#conn = conn;
+  }
+
+  isReady() {
+    return this.#ready;
+  }
+
+  whenReady() {
+    return this.#readyPromise;
   }
 
   connect(peerId: t.PeerId, meta?: t.PeerMetadata) {
@@ -72,7 +88,7 @@ export class PeerjsNetworkAdapter
     conn.on("data", handleData);
 
     this.on("peer-disconnected", () => {
-      this.#isReady = false;
+      this.#ready = false;
       conn.off("open", handleOpen);
       conn.off("close", handleClose);
       conn.off("data", handleData);
@@ -83,7 +99,7 @@ export class PeerjsNetworkAdapter
      * must be something weird going on at the other end to cause us
      * to receive no response.
      */
-    setTimeout(() => this.#setAsReady(), 100);
+    setTimeout(() => this.#forceReady(), 100);
   }
 
   disconnect() {
@@ -117,14 +133,8 @@ export class PeerjsNetworkAdapter
     this.#events.emit("data", payload);
   }
 
-  #setAsReady() {
-    if (this.#isReady) return;
-    this.#isReady = true;
-    this.emit("ready", { network: this });
-  }
-
   #announceConnection(peerId: t.PeerId, peerMetadata: t.PeerMetadata) {
-    this.#setAsReady();
+    this.#forceReady();
     this.emit("peer-candidate", { peerId, peerMetadata });
   }
 }

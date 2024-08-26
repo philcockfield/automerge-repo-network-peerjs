@@ -14,8 +14,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 #### Changed
 - Updates to Network interface (via @pvg, see [notes](https://patchwork.inkandswitch.com/#automerge-repo-network-adapter-api-changes--4RicZ28GjFaTi12xssztkpDjqruu?type=essay))
   
-  - Remove emitting "ready" event.
-  - Implement `isReady` and `whenReady`
+  - Removed emitting "ready" event.
+  - Implemented `isReady` and `whenReady`
   - `disconnect()` already implemented.
 
 ## [1.2.1] - 2024-07-27

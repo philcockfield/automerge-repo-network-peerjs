@@ -29,10 +29,10 @@ export type { DataConnection } from "peerjs";
  *    MessageChannelNetworkAdapter
  *    https://github.com/automerge/automerge-repo/blob/main/packages/automerge-repo-network-messagechannel/src/index.ts
  */
-export type { PeerjsNetworkAdapter } from "./NetworkAdapter.js";
+export type { PeerjsNetworkAdapter } from "./NetworkAdapter.ts";
 
 export type IODirection = "incoming" | "outgoing";
-export type NetworkMessage = ArriveMessage | WelcomeMessage | Message;
+export type NetworkMessage = ArriveMessage | WelcomeMessage | Message | LeaveMessage;
 export type NetworkMessageAlert = {
   direction: IODirection;
   message: NetworkMessage;
@@ -79,4 +79,14 @@ export type WelcomeMessage = {
 
   /** The peer metadata of the sender of this message */
   peerMetadata: PeerMetadata;
+};
+
+/**
+ * Notify the network that the peer is leaving.
+ */
+export type LeaveMessage = {
+  type: "leave";
+
+  /** The peer ID of the sender of this message */
+  senderId: PeerId;
 };

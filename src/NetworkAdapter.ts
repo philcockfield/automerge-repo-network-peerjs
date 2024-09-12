@@ -24,24 +24,17 @@ export class PeerjsNetworkAdapter
   #ready = false;
   #readyResolver?: () => void;
   #readyPromise: Promise<void> = new Promise<void>((resolve) => (this.#readyResolver = resolve));
-  #forceReady() {
-    if (this.#ready) return;
-    this.#ready = true;
-    this.#readyResolver?.();
+  isReady() {
+    return this.#ready;
+  }
+  whenReady() {
+    return this.#readyPromise;
   }
 
   constructor(conn: t.DataConnection) {
     if (!conn) throw new Error(`A peerjs data-connection is required`);
     super();
     this.#conn = conn;
-  }
-
-  isReady() {
-    return this.#ready;
-  }
-
-  whenReady() {
-    return this.#readyPromise;
   }
 
   connect(peerId: t.PeerId, meta?: t.PeerMetadata) {
@@ -75,6 +68,15 @@ export class PeerjsNetworkAdapter
       }
 
       /**
+       * Leave.
+       */
+      if (msg.type === "leave") {
+        if (this.peerId === msg.senderId) {
+          this.emit("peer-disconnected", { peerId });
+        }
+      }
+
+      /**
        * Default (data payload).
        */
       let payload = msg as t.Message;
@@ -99,12 +101,15 @@ export class PeerjsNetworkAdapter
      * must be something weird going on at the other end to cause us
      * to receive no response.
      */
-    setTimeout(() => this.#forceReady(), 100);
+    setTimeout(() => this.#setAsReady(), 100);
   }
 
   disconnect() {
     const peerId = this.peerId;
-    if (peerId) this.emit("peer-disconnected", { peerId });
+    if (peerId) {
+      this.#transmit({ type: "leave", senderId: peerId });
+      this.emit("peer-disconnected", { peerId });
+    }
   }
 
   onData(fn: (e: t.NetworkMessageAlert) => void) {
@@ -121,6 +126,10 @@ export class PeerjsNetworkAdapter
     }
   }
 
+  /**
+   * ↓ Internal Methods ↓
+   */
+
   #transmit(message: t.NetworkMessage) {
     if (!this.#conn) throw new Error("Connection not ready");
     this.#conn.send(message);
@@ -133,8 +142,15 @@ export class PeerjsNetworkAdapter
     this.#events.emit("data", payload);
   }
 
+  #setAsReady() {
+    if (this.#ready) return;
+    this.#ready = true;
+    this.emit("ready", { network: this });
+    this.#readyResolver?.();
+  }
+
   #announceConnection(peerId: t.PeerId, peerMetadata: t.PeerMetadata) {
-    this.#forceReady();
+    this.#setAsReady();
     this.emit("peer-candidate", { peerId, peerMetadata });
   }
 }
